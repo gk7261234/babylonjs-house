@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="utf-8" />
+    <title>Babylon - Getting Started</title>
+    <!-- link to the last version of babylon -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+ 
+ 
+ 
+    @*<script src="https://code.jquery.com/pep/0.4.2/pep.min.js"></script>*@
+    @*<script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.min.js"></script>*@
+    @*<script src="https://preview.babylonjs.com/cannon.js"></script>*@
+    @*<script src="https://preview.babylonjs.com/Oimo.js"></script>*@
+    @*<script src="https://preview.babylonjs.com/gltf_validator.js"></script>*@
+    <script src="https://preview.babylonjs.com/earcut.min.js"></script>
+    <script src="https://preview.babylonjs.com/babylon.js"></script>
+    @*<script src="https://preview.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
+    <script src="https://preview.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
+    <script src="https://preview.babylonjs.com/proceduralTexturesLibrary/babylonjs.proceduralTextures.min.js"></script>
+    <script src="https://preview.babylonjs.com/postProcessesLibrary/babylonjs.postProcess.min.js"></script>
+    <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.js"></script>
+    <script src="https://preview.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>*@
+    <script src="https://preview.babylonjs.com/gui/babylon.gui.min.js"></script>
+</head>
+<style>
+    html, body {
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+ 
+    #renderCanvas {
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+    }
+</style>
+ 
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <script type="text/javascript">
+        var Dictionary = function () {
+            this.elements = new Array();
+            //Length of Dictionary
+            this.length = function () {
+                return this.elements.length;
+            };
+            //Check whether the Dictionary is empty
+            this.isEmpty = function () {
+                return (this.length() < 1);
+            };
+            //remove all elements from the Dictionary
+            this.removeAll = function () {
+                this.elements = new Array();
+            };
+            //get specify element of the dictionary
+            this.element = function (index) {
+                var rlt = null;
+                if (index >= 0 && index < this.elements.length) {
+                    rlt = this.elements[index];
+                }
+                return rlt;
+            }
+            //check whether the Dictionary contains this key
+            this.Exists = function (key) {
+                var rlt = false;
+                try {
+                    for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                        if (this.elements[i].key == key) {
+                            rlt = true;
+                            break;
+                        }
+                    }
+                }
+                catch (ex) {
+                }
+                return rlt;
+            };
+            //check whether the Dictionary contains this value
+            this.containsValue = function (value) {
+                var rlt = false;
+                try {
+                    for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                        if (this.elements[i].value == value) {
+                            rlt = true;
+                            break;
+                        }
+                    }
+                }
+                catch (ex) {
+                }
+                return rlt;
+            };
+            //remove this key from the Dictionary
+            this.remove = function (key) {
+                var rlt = false;
+                try {
+                    for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                        if (this.elements[i].key == key) {
+                            this.elements.splice(i, 1);
+                            rlt = true;
+                            break;
+                        }
+                    }
+                }
+                catch (ex) {
+                }
+                return rlt;
+            };
+            //add this key/value to the Dictionary,if key is exists,replace the value
+            this.add = function (key, value) {
+                this.remove(key);
+                this.elements.push({
+                    key: key,
+                    value: value
+                });
+            };
+            //add this key/value to the Dictionary,if key is exists,append value
+            this.set = function (key, value) {
+                var arr = this.getItem(key);
+                if (arr != null) {
+                    if (typeof (arr) == "object") {
+                        arr.unshift.apply(arr, value);
+                        value = arr;
+                    }
+                    else {
+                        var array = [];
+                        array.push(arr);
+                        array.unshift.apply(array, value);
+                        value = array;
+                    }
+                    this.remove(key);
+                }
+                this.elements.push({
+                    key: key,
+                    value: value
+                });
+            }
+            //get value of the key
+            this.getItem = function (key) {
+                var rlt = null;
+                try {
+                    for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                        if (this.elements[i].key == key) {
+                            rlt = this.elements[i].value;
+                            break;
+                        }
+                    }
+                }
+                catch (ex) {
+                }
+                return rlt;
+            };
+            //get all keys of the dictionary
+            this.keys = function () {
+                var arr = [];
+                for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                    arr.push(this.elements[i].key);
+                }
+                return arr;
+            }
+            //get all values of the dictionary
+            this.values = function () {
+                var arr = [];
+                for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                    arr.push(this.elements[i].value);
+                }
+                return arr;
+            }
+        }
+        //初始的元素参数队列
+        var dicS = new Dictionary();
+        //盒子对象队列
+        var dicW = new Dictionary();
+    </script>
+    <script>
+        //获取画布对象
+        var canvas = document.getElementById('renderCanvas');
+        //加载巴比伦3D引擎
+        var engine = new BABYLON.Engine(canvas, true);
+        var sphere_0 = null;
+        var planeBG = null;
+        var scene = null;
+        var camera = null;
+        var light = null;
+        var colorArray = new Array(null, null, null);
+        var materialPlane = null;
+        var currentFloor = 1;//当前楼层
+        $(document).ready(function () {
+            engine.displayLoadingUI();
+            //赋予该场景于变量
+            scene = createScene223();
+ 
+            createUiPanel();
+            createUiPanelLegend();
+            //在引擎中循环运行这个场景
+            engine.runRenderLoop(function () {
+                scene.render();
+            });
+ 
+            scene.beforeRender = function () {
+ 
+            };
+            //追加事件：帆布与大小调整程序
+            window.addEventListener('resize', function () {
+                engine.resize();
+            });
+            engine.hideLoadingUI();
+        });
+ 
+         var createScene223 = function () {
+            //场景
+            var scene = new BABYLON.Scene(engine);
+            //scene.clearColor = BABYLON.Color3.White();
+            scene.clearColor = new BABYLON.Color3(0.5, 0.5, 0.5)
+ 
+            // Skybox
+            // var skybox = BABYLON.Mesh.CreateBox("skyBox", 1550.0, scene);
+            var skybox = BABYLON.Mesh.CreateSphere('sphere1', 16, 1550.0, scene);
+            var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+            skyboxMaterial.backFaceCulling = false;
+            skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("./images/skybox", scene);
+            skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+            skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+            skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+            skyboxMaterial.disableLighting = true;
+            skybox.material = skyboxMaterial;
+ 
+            //镜头
+            camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 0.6, Math.PI / 6, 250,new BABYLON.Vector3(57.5,0,50), scene);
+            camera.attachControl(canvas, true);
+            //灯光
+            var light = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0.4, 0.3, -0.4), scene);
+            //底图-草地
+            planeBG = BABYLON.Mesh.CreatePlane("plane", 550, scene);
+            planeBG.position.y = -0.1;
+            planeBG.rotation.x = Math.PI / 2;
+            var materialBG = new BABYLON.StandardMaterial("texturePlane", scene);
+            materialBG.diffuseTexture = new BABYLON.Texture("./images/grass.jpg", scene);
+            materialBG.diffuseTexture.uScale = 5.0;//Repeat 5 times on the Vertical Axes
+            materialBG.diffuseTexture.vScale = 5.0;//Repeat 5 times on the Horizontal Axes
+            materialBG.backFaceCulling = false;//Always show the front and the back of an element
+            planeBG.material = materialBG;
+            //工厂地面
+            var plane = BABYLON.Mesh.CreatePlane("plane", 512, scene);
+            plane.position.y = -0;
+            plane.rotation.x = Math.PI / 2;
+            plane.rotation.z = 0;
+            plane.scaling.x = 1;
+            plane.scaling.y = 0.724569;
+            materialPlane = new BABYLON.StandardMaterial("texturePlane", scene);
+            materialPlane.diffuseTexture = new BABYLON.Texture("./images/shuinidi.jpg", scene);
+            materialPlane.diffuseTexture.uScale = 5.0;//Repeat 5 times on the Vertical Axes
+            materialPlane.diffuseTexture.vScale = 5.0;//Repeat 5 times on the Horizontal Axes
+            materialPlane.backFaceCulling = false;//Always show the front and the back of an element
+            //materialPlane.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.3); //Red
+            plane.material = materialPlane;
+            createXYZ(scene);
+ 
+            Test(scene);
+ 
+            return scene;
+        }
+         //创建二楼场景
+         var createScene2 = function () {
+            //场景
+            var scene = new BABYLON.Scene(engine);
+            //scene.clearColor = BABYLON.Color3.White();
+            scene.clearColor = new BABYLON.Color3(0.5, 0.5, 0.5)
+ 
+            // Skybox
+            var skybox = BABYLON.Mesh.CreateBox("skyBox", 100.0, scene);
+            var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+            skyboxMaterial.backFaceCulling = false;
+            skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("./images/skybox", scene);
+            skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+            skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+            skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+            skyboxMaterial.disableLighting = true;
+            skybox.material = skyboxMaterial;
+ 
+            //镜头
+            camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 0.6, Math.PI / 6, 750, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, true);
+            //灯光
+            var light = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0.4, 0.3, -0.4), scene);
+            //底图-草地
+            planeBG = BABYLON.Mesh.CreatePlane("plane", 550, scene);
+            planeBG.position.y = -0.1;
+            planeBG.rotation.x = Math.PI / 2;
+            var materialBG = new BABYLON.StandardMaterial("texturePlane", scene);
+            materialBG.diffuseTexture = new BABYLON.Texture("./images/grass.jpg", scene);
+            materialBG.diffuseTexture.uScale = 5.0;//Repeat 5 times on the Vertical Axes
+            materialBG.diffuseTexture.vScale = 5.0;//Repeat 5 times on the Horizontal Axes
+            materialBG.backFaceCulling = false;//Always show the front and the back of an element
+            planeBG.material = materialBG;
+            //工厂地面
+            var plane = BABYLON.Mesh.CreatePlane("plane", 512, scene);
+            plane.position.y = -0;
+            plane.rotation.x = Math.PI / 2;
+            plane.rotation.z = 0;
+            plane.scaling.x = 1;
+            plane.scaling.y = 0.724569;
+            materialPlane = new BABYLON.StandardMaterial("texturePlane", scene);
+            materialPlane.diffuseTexture = new BABYLON.Texture("./images/shuinidi.jpg", scene);
+            materialPlane.diffuseTexture.uScale = 5.0;//Repeat 5 times on the Vertical Axes
+            materialPlane.diffuseTexture.vScale = 5.0;//Repeat 5 times on the Horizontal Axes
+            materialPlane.backFaceCulling = false;//Always show the front and the back of an element
+            //materialPlane.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.3); //Red
+            plane.material = materialPlane;
+            //原点
+            sphere_0 = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+            sphere_0.position.x = 0;
+            sphere_0.position.y = 0;
+            sphere_0.position.z = 0;
+            //x点
+            var sphere_x = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+            sphere_x.position.x = 10;
+            sphere_x.position.y = 0;
+            sphere_x.position.z = 0;
+            var materialSphere2 = new BABYLON.StandardMaterial("texture2", scene);
+            materialSphere2.diffuseColor = new BABYLON.Color3(1, 0, 0); //Red
+            sphere_x.material = materialSphere2;
+            //z点
+            var sphere_z = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+            sphere_z.position.x = 0;
+            sphere_z.position.y = 0;
+            sphere_z.position.z = 10;
+            var materialSphere3 = new BABYLON.StandardMaterial("texture2", scene);
+            materialSphere3.diffuseColor = new BABYLON.Color3(0, 2, 0); //green
+            sphere_z.material = materialSphere3;
+ 
+            return scene;
+        }
+         //创建一楼场景
+         var createScene = function () {
+            //场景
+            scene = new BABYLON.Scene(engine);
+            //scene.clearColor = new BABYLON.Color3(0.5, 0.5, 0.5);//灰色
+            scene.clearColor = new BABYLON.Color3(0.3, 0.6, 0.9);//浅蓝
+            //镜头
+            camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 0.6, Math.PI / 6, 550, BABYLON.Vector3.Zero(), scene);
+            camera.upperBetaLimit = 1.5;
+            camera.attachControl(canvas, true);
+            //灯光
+            light = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0.4, 0.3, -0.4), scene);
+            //底图-草地
+            planeBG = BABYLON.Mesh.CreatePlane("plane", 550, scene);
+            planeBG.position.y = -0.1;
+            planeBG.rotation.x = Math.PI / 2;
+            var materialBG = new BABYLON.StandardMaterial("texturePlane", scene);
+            materialBG.diffuseTexture = new BABYLON.Texture("./images/shuinidi.jpg", scene);
+            materialBG.diffuseTexture.uScale = 5.0;//Repeat 5 times on the Vertical Axes
+            materialBG.diffuseTexture.vScale = 5.0;//Repeat 5 times on the Horizontal Axes
+            materialBG.backFaceCulling = false;//Always show the front and the back of an element
+            planeBG.material = materialBG;
+            //工厂地面
+            var plane = BABYLON.Mesh.CreatePlane("plane", 512, scene);
+            plane.position.y = -0;
+            plane.rotation.x = Math.PI / 2;
+            plane.rotation.z = 0;
+            plane.scaling.x = 1;
+            plane.scaling.y = 0.724569;
+            materialPlane = new BABYLON.StandardMaterial("texturePlane", scene);
+            materialPlane.diffuseTexture = new BABYLON.Texture("./images/shuinidi.jpg", scene);
+            materialPlane.diffuseTexture.uScale = 5.0;//Repeat 5 times on the Vertical Axes
+            materialPlane.diffuseTexture.vScale = 5.0;//Repeat 5 times on the Horizontal Axes
+            materialPlane.backFaceCulling = false;//Always show the front and the back of an element
+            //materialPlane.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.3); //Red
+            plane.material = materialPlane;
+            //颜色变量
+            var materialColorGreen = new BABYLON.StandardMaterial("texture2", scene);
+            materialColorGreen.diffuseColor = new BABYLON.Color3(0, 0.85, 0); //green
+            colorArray[0] = materialColorGreen;
+            var materialColorYellow = new BABYLON.StandardMaterial("texture2", scene);
+            materialColorYellow.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0); //yellow
+            colorArray[1] = materialColorYellow;
+            var materialColorRed = new BABYLON.StandardMaterial("texture2", scene);
+            materialColorRed.diffuseColor = new BABYLON.Color3(0.85, 0, 0); //red
+            colorArray[2] = materialColorRed;
+            var materialColorBrown = new BABYLON.StandardMaterial("texture2", scene);
+            materialColorBrown.diffuseColor = new BABYLON.Color3(0.4, 0.4, 0.4); //灰色
+            colorArray[3] = materialColorBrown;
+ 
+            //创建坐标参照物
+            createXYZ(scene);
+ 
+            //初始化物体数据
+            initDic();
+ 
+            //循环创建物体
+            var arrkey = dicS.keys();
+            $.each(arrkey, function (i, fe) {
+                var key = fe;
+                var wall = dicS.getItem(fe);
+                createWall(wall, scene);
+            });
+ 
+            //写地板问题
+            drawBoardText(scene);
+ 
+            //UI图例
+            createUiPanel();
+ 
+            return scene;
+        }
+
+        var createXYZ = function (scene) {
+            //原点
+            var sphere_0 = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+            sphere_0.position.x = 0;
+            sphere_0.position.y = 0;
+            sphere_0.position.z = 0;
+            //x点
+            var sphere_x = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+            sphere_x.position.x = 10;
+            sphere_x.position.y = 0;
+            sphere_x.position.z = 0;
+            var materialSphere2 = new BABYLON.StandardMaterial("texture2", scene);
+            materialSphere2.diffuseColor = new BABYLON.Color3(1, 0, 0); //Red
+            sphere_x.material = materialSphere2;
+            //z点
+            var sphere_z = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+            sphere_z.position.x = 0;
+            sphere_z.position.y = 0;
+            sphere_z.position.z = 10;
+            var materialSphere3 = new BABYLON.StandardMaterial("texture2", scene);
+            materialSphere3.diffuseColor = new BABYLON.Color3(0, 2, 0); //green
+            sphere_z.material = materialSphere3;
+        }
+         
+ 
+        //图例面板
+        var createUiPanelLegend = function () {
+            // UI
+            var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+            var UiPanel = new BABYLON.GUI.StackPanel();
+            //UiPanel.height = "220px";
+            UiPanel.fontSize = "14px";
+            UiPanel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            UiPanel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+            advancedTexture.addControl(UiPanel);
+            // ..
+            var button = BABYLON.GUI.Button.CreateSimpleButton("but1", "正常");
+            button.paddingTop = "1px";
+            button.paddingLeft = "5px";
+            button.width = "50px";
+            button.height = "30px";
+            button.color = "black";
+            button.background = "green";
+ 
+            UiPanel.addControl(button);
+            // ..
+            var button1 = BABYLON.GUI.Button.CreateSimpleButton("but2", "待机");
+            button1.paddingTop = "1px";
+            button1.paddingLeft = "5px";
+            button1.width = "50px";
+            button1.height = "30px";
+            button1.color = "black";
+            button1.background = "yellow";
+ 
+            UiPanel.addControl(button1);
+            // ..
+            var button1 = BABYLON.GUI.Button.CreateSimpleButton("but3", "停机");
+            button1.paddingTop = "1px";
+            button1.paddingLeft = "5px";
+            button1.width = "50px";
+            button1.height = "30px";
+            button1.color = "black";
+            button1.background = "red";
+ 
+            UiPanel.addControl(button1);
+            // ..
+            var button1 = BABYLON.GUI.Button.CreateSimpleButton("but4", "未连接");
+            button1.paddingTop = "1px";
+            button1.paddingLeft = "5px";
+            button1.width = "50px";
+            button1.height = "30px";
+            button1.color = "black";
+            button1.background = "gray";
+ 
+            UiPanel.addControl(button1);
+        }
+ 
+        //控制面板
+        var createUiPanel = function () {
+            // UI
+            var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+            var UiPanel = new BABYLON.GUI.StackPanel();
+            UiPanel.fontSize = "14px";
+            UiPanel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+            UiPanel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+            advancedTexture.addControl(UiPanel);
+            // ..
+            var button = BABYLON.GUI.Button.CreateSimpleButton("but1", "全图");
+            button.paddingTop = "5px";
+            button.paddingLeft = "5px";
+            button.width = "80px";
+            button.height = "40px";
+            button.color = "white";
+            button.background = "green";
+            button.onPointerDownObservable.add(() => {
+                if (currentFloor != 0) {
+                    currentFloor = 0;
+                    scene = createScene2();
+                    createUiPanel();
+                }
+            });
+ 
+            UiPanel.addControl(button);
+            // ..
+            var button1 = BABYLON.GUI.Button.CreateSimpleButton("but2", "一楼");
+            button1.paddingTop = "1px";
+            button1.paddingLeft = "5px";
+            button1.width = "80px";
+            button1.height = "40px";
+            button1.color = "white";
+            button1.background = "green";
+            button1.onPointerDownObservable.add(() => {
+                if (currentFloor != 1) {
+                    currentFloor = 1;
+                    scene = createScene();
+                    createUiPanel();
+                    createUiPanelLegend();
+                }
+            });
+ 
+            UiPanel.addControl(button1);
+            // ..
+            var button1 = BABYLON.GUI.Button.CreateSimpleButton("but3", "二楼");
+            button1.paddingTop = "1px";
+            button1.paddingLeft = "5px";
+            button1.width = "80px";
+            button1.height = "40px";
+            button1.color = "white";
+            button1.background = "green";
+ 
+            UiPanel.addControl(button1);
+            // ..
+            var button1 = BABYLON.GUI.Button.CreateSimpleButton("but4", "三楼");
+            button1.paddingTop = "1px";
+            button1.paddingLeft = "5px";
+            button1.width = "80px";
+            button1.height = "40px";
+            button1.color = "white";
+            button1.background = "green";
+ 
+            UiPanel.addControl(button1);
+            // ..
+            var button1 = BABYLON.GUI.Button.CreateSimpleButton("but4", "四楼");
+            button1.paddingTop = "1px";
+            button1.paddingLeft = "5px";
+            button1.width = "80px";
+            button1.height = "40px";
+            button1.color = "white";
+            button1.background = "green";
+ 
+            UiPanel.addControl(button1);
+        }
+ 
+//********************************************************************************************************************************************************
+//*
+//*
+//*
+//********************************************************************************************************************************************************
+        //挖孔
+        var waKong = function (x, y, width, height) {
+            var xx = x + width;
+            var yy = y + height;
+            return [
+                new BABYLON.Vector3(x, 0, y),
+                new BABYLON.Vector3(xx, 0, y),
+                new BABYLON.Vector3(xx, 0, yy),
+                new BABYLON.Vector3(x, 0, yy)
+            ];
+        }
+        //画窗
+        var windowMaker = function (width, height, frames, frameDepth, frameThickness) {
+            var windowShape = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(width, 0, 0),
+                new BABYLON.Vector3(width, 0, height),
+                new BABYLON.Vector3(0, 0, height)
+            ];
+            var glassWidth = (width - (frames + 1) * frameThickness) / frames;
+            var glassTopHeight = height / 3 - frameThickness;
+            var glassBotHeight = 2 * glassTopHeight;
+            var glass = [];
+            var acf = frameThickness;
+            for (var f = 0; f < frames; f++) {
+                glass[2 * f] = [];
+                glass[2 * f].push(new BABYLON.Vector3(acf, 0, 2 * frameThickness + glassBotHeight));
+                glass[2 * f].push(new BABYLON.Vector3(acf + glassWidth, 0, 2 * frameThickness + glassBotHeight));
+                glass[2 * f].push(new BABYLON.Vector3(acf + glassWidth, 0, 2 * frameThickness + glassBotHeight + glassTopHeight));
+                glass[2 * f].push(new BABYLON.Vector3(acf, 0, 2 * frameThickness + glassBotHeight + glassTopHeight));
+                glass[2 * f + 1] = [];
+                glass[2 * f + 1].push(new BABYLON.Vector3(acf, 0, frameThickness));
+                glass[2 * f + 1].push(new BABYLON.Vector3(acf + glassWidth, 0, frameThickness));
+                glass[2 * f + 1].push(new BABYLON.Vector3(acf + glassWidth, 0, frameThickness + glassBotHeight));
+                glass[2 * f + 1].push(new BABYLON.Vector3(acf, 0, frameThickness + glassBotHeight));
+                acf += frameThickness + glassWidth;
+            }
+            var window = BABYLON.MeshBuilder.ExtrudePolygon("window", { shape: windowShape, holes: glass, depth: frameDepth }, scene);
+            window.rotation.x = -Math.PI / 2;
+            return window;
+        }
+        //画门
+        var doorMaker = function (width, height, depth) {
+            var doorShape = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(width, 0, 0),
+                new BABYLON.Vector3(width, 0, height),
+                new BABYLON.Vector3(0, 0, height)
+            ];
+            edgeThickness = width / 8
+            var panelWidth = width - 2 * edgeThickness;
+            var panelBotHeight = (height - 3 * edgeThickness) / 1.75;
+            var panelTopHeight = 0.75 * panelBotHeight;
+            var panel = [];
+            panel[0] = [];
+            panel[0].push(new BABYLON.Vector3(edgeThickness, 0, 2 * edgeThickness + panelBotHeight));
+            panel[0].push(new BABYLON.Vector3(edgeThickness + panelWidth, 0, 2 * edgeThickness + panelBotHeight));
+            panel[0].push(new BABYLON.Vector3(edgeThickness + panelWidth, 0, 2 * edgeThickness + panelBotHeight + panelTopHeight));
+            panel[0].push(new BABYLON.Vector3(edgeThickness, 0, 2 * edgeThickness + panelBotHeight + panelTopHeight));
+            panel[1] = [];
+            panel[1].push(new BABYLON.Vector3(edgeThickness, 0, edgeThickness));
+            panel[1].push(new BABYLON.Vector3(edgeThickness + panelWidth, 0, edgeThickness));
+            panel[1].push(new BABYLON.Vector3(edgeThickness + panelWidth, 0, edgeThickness + panelBotHeight));
+            panel[1].push(new BABYLON.Vector3(edgeThickness, 0, edgeThickness + panelBotHeight));
+            var door = BABYLON.MeshBuilder.ExtrudePolygon("door", { shape: doorShape, holes: panel, depth: depth }, scene);
+            door.rotation.x = -Math.PI / 2;
+            var panelB = BABYLON.MeshBuilder.CreateBox("p1b", { width: panelWidth, height: panelBotHeight, depth: depth / 2 }, scene);
+            panelB.position.x = edgeThickness + panelWidth / 2;
+            panelB.position.y = edgeThickness + panelBotHeight / 2;
+            panelB.position.z = depth / 2;
+            var panelT = BABYLON.MeshBuilder.CreateBox("p1t", { width: panelWidth, height: panelTopHeight, depth: depth / 2 }, scene);
+            panelT.position.x = edgeThickness + panelWidth / 2;
+            panelT.position.y = 2 * edgeThickness + panelBotHeight + panelTopHeight / 2;
+            panelT.position.z = depth / 2;
+ 
+            return BABYLON.Mesh.MergeMeshes([door, panelB, panelT], true);
+        };
+        //画地板
+        var drawFloor = function () {
+            var floormat = new BABYLON.StandardMaterial("floormaterial", scene);
+            floormat.diffuseTexture = new BABYLON.Texture(
+                "./images/flooter.jpg",
+                scene);
+ 
+            //一楼地板
+            var floorData = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(115, 0, 0),
+                new BABYLON.Vector3(115, 0, 100),
+                new BABYLON.Vector3(0, 0, 100)
+            ];
+ 
+            var stairSpace = [];
+             
+            var floorFaceUV = new Array(3);
+ 
+            floorFaceUV[0] = new BABYLON.Vector4(0, 0, 0.5, 1);
+            floorFaceUV[2] = new BABYLON.Vector4(0.5, 0, 1, 1);
+ 
+            var floor = BABYLON.MeshBuilder.ExtrudePolygon("floor", { shape: floorData, holes: stairSpace, depth: 0.1, faceUV: floorFaceUV }, scene);
+            floor.position.y = 0.3;
+            floor.position.z = 0;
+ 
+            floor.material = floormat;
+ 
+            //二楼地板
+            var floorData = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(115, 0, 0),
+                new BABYLON.Vector3(115, 0, 100),
+                new BABYLON.Vector3(0, 0, 100)
+            ];
+ 
+            var stairSpace = [];
+            stairSpace[0] = waKong(3, 0, 11, 10);
+            stairSpace[1] = waKong(43, 0, 11, 10);
+            stairSpace[2] = waKong(103, 0, 11, 10);
+ 
+            var floorFaceUV = new Array(3);
+ 
+            floorFaceUV[0] = new BABYLON.Vector4(0, 0, 0.5, 1);
+            floorFaceUV[2] = new BABYLON.Vector4(0.5, 0, 1, 1);
+ 
+            var floor = BABYLON.MeshBuilder.ExtrudePolygon("floor", { shape: floorData, holes: stairSpace, depth: 0.1, faceUV: floorFaceUV }, scene);
+            floor.position.y = 13;
+            floor.position.z = 0;
+ 
+            floor.material = floormat;
+ 
+            //三楼地板
+            var floorData = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(115, 0, 0),
+                new BABYLON.Vector3(115, 0, 100),
+                new BABYLON.Vector3(0, 0, 100)
+            ];
+ 
+            var stairSpace = [];
+            stairSpace[0] = waKong(3, 0, 11, 10);
+            stairSpace[1] = waKong(43, 0, 11, 10);
+            stairSpace[2] = waKong(103, 0, 11, 10);
+ 
+            var floorFaceUV = new Array(3);
+ 
+            floorFaceUV[0] = new BABYLON.Vector4(0, 0, 0.5, 1);
+            floorFaceUV[2] = new BABYLON.Vector4(0.5, 0, 1, 1);
+ 
+            var floor = BABYLON.MeshBuilder.ExtrudePolygon("floor", { shape: floorData, holes: stairSpace, depth: 0.1, faceUV: floorFaceUV }, scene);
+            floor.position.y = 23;
+            floor.position.z = 0;
+ 
+            floor.material = floormat;
+             
+            //四楼地板
+            var floorData = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(115, 0, 0),
+                new BABYLON.Vector3(115, 0, 100),
+                new BABYLON.Vector3(0, 0, 100)
+            ];
+ 
+            var stairSpace = [];
+            stairSpace[0] = waKong(3, 0, 11, 10);
+            stairSpace[1] = waKong(43, 0, 11, 10);
+            stairSpace[2] = waKong(103, 0, 11, 10);
+ 
+            var floorFaceUV = new Array(3);
+ 
+            floorFaceUV[0] = new BABYLON.Vector4(0, 0, 0.5, 1);
+            floorFaceUV[2] = new BABYLON.Vector4(0.5, 0, 1, 1);
+ 
+            var floor = BABYLON.MeshBuilder.ExtrudePolygon("floor", { shape: floorData, holes: stairSpace, depth: 0.1, faceUV: floorFaceUV }, scene);
+            floor.position.y = 33;
+            floor.position.z = 0;
+ 
+            floor.material = floormat;
+ 
+ 
+            var wallmat = new BABYLON.StandardMaterial("wallmaterial", scene);
+            wallmat.diffuseTexture = new BABYLON.Texture("", scene);
+            //五楼地板
+            var floorData = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(115, 0, 0),
+                new BABYLON.Vector3(115, 0, 100),
+                new BABYLON.Vector3(0, 0, 100)
+            ];
+ 
+            var stairSpace = [];
+            stairSpace[0] = waKong(3, 0, 11, 10);
+            stairSpace[1] = waKong(43, 0, 11, 10);
+            stairSpace[2] = waKong(103, 0, 11, 10);
+ 
+            var floorFaceUV = new Array(3);
+            floorFaceUV[0] = new BABYLON.Vector4(1, 0, 0.5, 1);
+            floorFaceUV[1] = new BABYLON.Vector4(1, 0, 1, 1);
+ 
+            var floor = BABYLON.MeshBuilder.ExtrudePolygon("floor", { shape: floorData, holes: stairSpace, depth: 0.1, faceUV: floorFaceUV }, scene);
+            floor.position.y = 43;
+            floor.position.z = 0;
+ 
+            floor.material = wallmat;
+        }
+        //前面墙
+        var drawFrontWall = function () {
+ 
+            var wallmat = new BABYLON.StandardMaterial("wallmaterial", scene);
+            wallmat.diffuseTexture = new BABYLON.Texture("./images/flooter.jpg", scene);
+ 
+            var width = 115;
+            var height = 50;
+            var rearWallnb1Data = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(width, 0, 0),
+                new BABYLON.Vector3(width, 0, height),
+                new BABYLON.Vector3(0, 0, height),
+            ];
+ 
+            //Holes in XoZ plane
+            var rear1WindowHoles = [];
+            rear1WindowHoles[0] = [
+                new BABYLON.Vector3(7, 0, 0),
+                new BABYLON.Vector3(14, 0, 0),
+                new BABYLON.Vector3(14, 0, 6),
+                new BABYLON.Vector3(7, 0, 6)
+            ];
+ 
+            rear1WindowHoles[1] = [
+                new BABYLON.Vector3(30, 0, 0),
+                new BABYLON.Vector3(42, 0, 0),
+                new BABYLON.Vector3(42, 0, 10),
+                new BABYLON.Vector3(30, 0, 10)
+            ];
+ 
+            rear1WindowHoles[2] = waKong(2, 16, 5, 2);
+            rear1WindowHoles[3] = waKong(2, 26, 5, 2);
+            rear1WindowHoles[4] = waKong(2, 36, 5, 2);
+ 
+            rear1WindowHoles[5] = waKong(21, 3, 6, 5);
+            rear1WindowHoles[6] = waKong(21, 15, 6, 5);
+            rear1WindowHoles[7] = waKong(21, 25, 6, 5);
+            rear1WindowHoles[8] = waKong(21, 35, 6, 5);
+ 
+            rear1WindowHoles[9] = waKong(31, 13, 10, 7);
+            rear1WindowHoles[10] = waKong(31, 23, 10, 7);
+            rear1WindowHoles[11] = waKong(31, 33, 10, 7);
+ 
+            rear1WindowHoles[12] = waKong(45, 0, 3, 5);
+            rear1WindowHoles[13] = waKong(45, 15, 3, 5);
+            rear1WindowHoles[14] = waKong(45, 25, 3, 5);
+            rear1WindowHoles[15] = waKong(45, 35, 3, 5);
+            rear1WindowHoles[16] = waKong(45, 43, 3, 2.5);
+ 
+            rear1WindowHoles[17] = waKong(57, 3, 6, 5);
+            rear1WindowHoles[18] = waKong(57, 15, 6, 5);
+            rear1WindowHoles[19] = waKong(57, 25, 6, 5);
+            rear1WindowHoles[20] = waKong(57, 35, 6, 5);
+ 
+            rear1WindowHoles[21] = waKong(64, 3, 6, 5);
+            rear1WindowHoles[22] = waKong(64, 15, 6, 5);
+            rear1WindowHoles[23] = waKong(64, 25, 6, 5);
+            rear1WindowHoles[24] = waKong(64, 35, 6, 5);
+ 
+            rear1WindowHoles[25] = waKong(73, 3, 6, 5);
+            rear1WindowHoles[26] = waKong(73, 15, 6, 5);
+            rear1WindowHoles[27] = waKong(73, 25, 6, 5);
+            rear1WindowHoles[28] = waKong(73, 35, 6, 5);
+ 
+            rear1WindowHoles[29] = waKong(80, 3, 6, 5);
+            rear1WindowHoles[30] = waKong(80, 15, 6, 5);
+            rear1WindowHoles[31] = waKong(80, 25, 6, 5);
+            rear1WindowHoles[32] = waKong(80, 35, 6, 5);
+ 
+            rear1WindowHoles[33] = waKong(89, 3, 6, 5);
+            rear1WindowHoles[34] = waKong(89, 15, 6, 5);
+            rear1WindowHoles[35] = waKong(89, 25, 6, 5);
+            rear1WindowHoles[36] = waKong(89, 35, 6, 5);
+ 
+            rear1WindowHoles[37] = waKong(96, 3, 6, 5);
+            rear1WindowHoles[38] = waKong(96, 15, 6, 5);
+            rear1WindowHoles[39] = waKong(96, 25, 6, 5);
+            rear1WindowHoles[40] = waKong(96, 35, 6, 5);
+ 
+            rear1WindowHoles[41] = waKong(105, 0, 3, 5);
+ 
+            for (var k = 0; k < rear1WindowHoles.length; k++) {
+                var kog = rear1WindowHoles[k][0];
+                var kog2 = rear1WindowHoles[k][2];
+                var width = kog2.x - kog.x;
+                var height = kog2.z - kog.z;
+                var frames = 4;
+                if (height == 2 || width == 3) {
+                    frames = 2;
+                }
+                if (kog.z == 0 || width == 10) {
+                    continue;
+                }
+                //窗
+                var windowFBL = windowMaker(width, height, frames, 0.15, 0.1);
+                //windowFBL.rotation.z = -Math.PI / 2;
+                //windowFBL.rotation.x = -Math.PI / 2;
+                windowFBL.position.x = kog.x;
+                windowFBL.position.y = kog.z;
+                windowFBL.position.z = -0.1;
+            }
+ 
+            var rearFaceUV = [];
+            rearFaceUV[2] = new BABYLON.Vector4(7 / 15, 0, 14 / 15, 1);
+            rearFaceUV[1] = new BABYLON.Vector4(14 / 15, 0, 1, 1);
+            rearFaceUV[0] = new BABYLON.Vector4(0, 0, 7 / 15, 1);
+ 
+            var rearWallnb1 = BABYLON.MeshBuilder.ExtrudePolygon("rearWallnb1", { shape: rearWallnb1Data, depth: 0.1, holes: rear1WindowHoles, faceUV: rearFaceUV }, scene);
+            //rearWallnb1.rotation.x = -Math.PI / 0.99; 
+            rearWallnb1.rotation.x = -Math.PI / 2;
+ 
+            rearWallnb1.material = wallmat;
+ 
+            rearWallnb1.position.y = 0.0;
+            rearWallnb1.position.x = 0;
+            rearWallnb1.position.z = 0;
+            console.log("frontWall.scaling.x:" + rearWallnb1.scaling.x);
+            console.log("frontWall.scaling.y:" + rearWallnb1.scaling.y);
+            console.log("frontWall.scaling.z:" + rearWallnb1.scaling.z);
+            
+            var doormat = new BABYLON.StandardMaterial("door", scene);
+            doormat.diffuseColor = new BABYLON.Color3(82 / 255, 172 / 255, 106 / 255);
+ 
+            var frontDoor = doorMaker(3, 5, 0.05);
+            frontDoor.position.x = 45;
+            frontDoor.position.y = 0;
+            frontDoor.position.z = 0.15;
+            frontDoor.material = doormat;
+ 
+            var frontDoor = doorMaker(3, 5, 0.05);
+            frontDoor.position.x = 105;
+            frontDoor.position.y = 0;
+            frontDoor.position.z = 0.15;
+            frontDoor.material = doormat;
+        }
+        //后面墙
+        var drawRearWall = function () {
+            var wallmat = new BABYLON.StandardMaterial("wallmaterial", scene);
+            wallmat.diffuseTexture = new BABYLON.Texture("./images/flooter.jpg", scene);
+            var width = 115;
+            var height = 50;
+            var rearWallnb1Data = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(width, 0, 0),
+                new BABYLON.Vector3(width, 0, height),
+                new BABYLON.Vector3(0, 0, height),
+            ];
+ 
+            var coun = 13;
+            var i = 0;
+            //Holes in XoZ plane
+            var rear1WindowHoles = [];
+            //0
+            rear1WindowHoles[i++] = waKong(coun, 0, 3, 6);
+            coun = coun - 3;
+            for (var k = 0; k < 6; k++) {
+                coun += 6+3;
+                rear1WindowHoles[i++] = waKong(coun, 3, 6, 5);
+                rear1WindowHoles[i++] = waKong(coun, 15, 6, 5);
+                rear1WindowHoles[i++] = waKong(coun, 25, 6, 5);
+                rear1WindowHoles[i++] = waKong(coun, 35, 6, 5);
+                //2
+                coun += 6 + 1;
+                rear1WindowHoles[i++] = waKong(coun, 3, 6, 5);
+                rear1WindowHoles[i++] = waKong(coun, 15, 6, 5);
+                rear1WindowHoles[i++] = waKong(coun, 25, 6, 5);
+                rear1WindowHoles[i++] = waKong(coun, 35, 6, 5);
+            } 
+            for (var k = 0; k < rear1WindowHoles.length; k++) {
+                var kog = rear1WindowHoles[k][0];
+                var kog2 = rear1WindowHoles[k][2];
+                var width = kog2.x - kog.x;
+                var height = kog2.z - kog.z;
+                if (kog.z == 0) {
+                    continue;
+                }
+                var frames = 4;
+                if (height == 2 || width == 3) {
+                    frames = 2;
+                }
+                //窗
+                var windowFBL = windowMaker(width, height, frames, 0.15, 0.1);
+                //windowFBL.rotation.z = -Math.PI / 2;
+                //windowFBL.rotation.x = -Math.PI / 2;
+                windowFBL.position.x = kog.x;
+                windowFBL.position.y = kog.z;
+                windowFBL.position.z = 100.1;
+            }
+            
+            var rearFaceUV = [];
+            rearFaceUV[0] = new BABYLON.Vector4(7 / 15, 0, 14 / 15, 1);
+            rearFaceUV[1] = new BABYLON.Vector4(14 / 15, 0, 1, 1);
+            rearFaceUV[2] = new BABYLON.Vector4(0, 0, 7 / 15, 1);
+ 
+            var rearWallnb1 = BABYLON.MeshBuilder.ExtrudePolygon("rearWallnb1", { shape: rearWallnb1Data, depth: 0.1, holes: rear1WindowHoles, faceUV: rearFaceUV }, scene);
+            rearWallnb1.rotation.x = -Math.PI / 2;
+            rearWallnb1.position.z = 100;
+            rearWallnb1.material = wallmat;
+ 
+        }
+        //左面墙
+        var drawSideWallnb2 = function () {
+            var wallmat = new BABYLON.StandardMaterial("wallmaterial", scene);
+            wallmat.diffuseTexture = new BABYLON.Texture("./images/flooter.jpg", scene);
+              
+            var width = 100;
+            var height = 50;
+            var sideWallnb2Data = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(width, 0, 0),
+                new BABYLON.Vector3(width, 0, height),
+                new BABYLON.Vector3(0, 0, height),
+            ];
+ 
+            /////
+            var sideWindowHoles = [];
+            //1
+            sideWindowHoles[0] = waKong(3, 25, 6, 5);
+            sideWindowHoles[1] = waKong(3, 35, 6, 5);
+            //2
+            sideWindowHoles[2] = waKong(10, 25, 6, 5);
+            sideWindowHoles[3] = waKong(10, 35, 6, 5);
+            //3
+            sideWindowHoles[4] = waKong(20, 3, 6, 5);
+            sideWindowHoles[5] = waKong(20, 15, 6, 5);
+            sideWindowHoles[6] = waKong(20, 25, 6, 5);
+            sideWindowHoles[7] = waKong(20, 35, 6, 5);
+            //4
+            sideWindowHoles[8] = waKong(27, 3, 6, 5);
+            sideWindowHoles[9] = waKong(27, 15, 6, 5);
+            sideWindowHoles[10] = waKong(27, 25, 6, 5);
+            sideWindowHoles[11] = waKong(27, 35, 6, 5);
+            //5
+            sideWindowHoles[12] = waKong(36, 3, 6, 5);
+            sideWindowHoles[13] = waKong(36, 15, 6, 5);
+            sideWindowHoles[14] = waKong(36, 25, 6, 5);
+            sideWindowHoles[15] = waKong(36, 35, 6, 5);
+            //6
+            sideWindowHoles[16] = waKong(43, 3, 6, 5);
+            sideWindowHoles[17] = waKong(43, 15, 6, 5);
+            sideWindowHoles[18] = waKong(43, 25, 6, 5);
+            sideWindowHoles[19] = waKong(43, 35, 6, 5);
+ 
+            //7
+            sideWindowHoles[20] = waKong(52, 3, 6, 5);
+            sideWindowHoles[21] = waKong(52, 15, 6, 5);
+            sideWindowHoles[22] = waKong(52, 25, 6, 5);
+            //8
+            sideWindowHoles[23] = waKong(59, 3, 6, 5);
+            sideWindowHoles[24] = waKong(59, 15, 6, 5);
+            sideWindowHoles[25] = waKong(59, 25, 6, 5);
+            //9
+            sideWindowHoles[26] = waKong(68, 3, 6, 5);
+            sideWindowHoles[27] = waKong(68, 15, 6, 5);
+            sideWindowHoles[28] = waKong(68, 25, 6, 5);
+            //10
+            sideWindowHoles[29] = waKong(75, 3, 6, 5);
+            sideWindowHoles[30] = waKong(75, 15, 6, 5);
+            sideWindowHoles[31] = waKong(75, 25, 6, 5);
+            
+            //11
+            sideWindowHoles[32] = waKong(84, 3, 6, 5);
+            sideWindowHoles[33] = waKong(84, 15, 6, 5);
+            sideWindowHoles[34] = waKong(84, 25, 6, 5);
+ 
+            //12
+            sideWindowHoles[35] = waKong(93, 8, 6, 5);
+            sideWindowHoles[36] = waKong(93, 20, 6, 5);
+            sideWindowHoles[37] = waKong(93, 30, 6, 5);
+ 
+            for (var k = 0; k < sideWindowHoles.length; k++) {
+                var kog = sideWindowHoles[k][0];
+                var kog2 = sideWindowHoles[k][2];
+                var width = kog2.x - kog.x;
+                var height = kog2.z - kog.z; 
+                //窗
+                var windowFBL = windowMaker(width, height, 4, 0.15, 0.1);
+                windowFBL.rotation.z = -Math.PI / 2;
+                windowFBL.rotation.x = -Math.PI / 2;
+                windowFBL.position.x = 0;
+                windowFBL.position.y = kog.z;
+                windowFBL.position.z = kog.x;
+            }
+            
+            var side2FaceUV = new Array(3);
+ 
+            side2FaceUV[0] = new BABYLON.Vector4(7 / 15, 0, 14 / 15, 1);
+            side2FaceUV[1] = new BABYLON.Vector4(14 / 15, 0, 1, 1);
+            side2FaceUV[2] = new BABYLON.Vector4(0, 0, 7 / 15, 1)
+ 
+            var sideWallnb2 = BABYLON.MeshBuilder.ExtrudePolygon("sideWallnb2", { shape: sideWallnb2Data, depth: 0.1, holes: sideWindowHoles, faceUV: side2FaceUV }, scene);
+            sideWallnb2.rotation.z = -Math.PI / 2;
+            sideWallnb2.rotation.x = -Math.PI / 2;
+            sideWallnb2.position.x = 0;
+            sideWallnb2.position.z = 0;
+            sideWallnb2.position.y = 0;
+            sideWallnb2.material = wallmat;
+            
+        }
+        //右面墙
+        var drawSideWallnb3 = function () {
+            var wallmat = new BABYLON.StandardMaterial("wallmaterial", scene);
+            wallmat.diffuseTexture = new BABYLON.Texture("./images/flooter.jpg", scene);
+ 
+            var width = 100;
+            var height = 50;
+            var sideWallnb3Data = [
+                new BABYLON.Vector3(0, 0, 0),
+                new BABYLON.Vector3(width, 0, 0),
+                new BABYLON.Vector3(width, 0, height),
+                new BABYLON.Vector3(0, 0, height),
+            ];
+             
+            var coun = 3;
+            var i = 0;
+            //Holes in XoZ plane
+            var sideWindowHoles = [];
+            sideWindowHoles[i++] = waKong(coun, 8, 6, 5);
+            sideWindowHoles[i++] = waKong(coun, 25, 6, 5);
+            sideWindowHoles[i++] = waKong(coun, 40, 6, 5);
+            //sideWindowHoles[i++] = waKong(coun, 40, 6, 5);
+            coun += 6 + 3; 
+            sideWindowHoles[i++] = waKong(coun, 8, 6, 3);
+            sideWindowHoles[i++] = waKong(coun, 20, 6, 3);
+            sideWindowHoles[i++] = waKong(coun, 30, 6, 3);
+            sideWindowHoles[i++] = waKong(coun, 40, 6, 3);
+             
+            for (var k = 0; k < 5; k++) {
+                coun += 6 + 3; 
+                sideWindowHoles[i++] = waKong(coun, 3, 6, 5);
+                sideWindowHoles[i++] = waKong(coun, 15, 6, 5);
+                sideWindowHoles[i++] = waKong(coun, 25, 6, 5);
+                sideWindowHoles[i++] = waKong(coun, 35, 6, 5);
+                //2
+                coun += 6 + 1;
+                sideWindowHoles[i++] = waKong(coun, 3, 6, 5);
+                sideWindowHoles[i++] = waKong(coun, 15, 6, 5);
+                sideWindowHoles[i++] = waKong(coun, 25, 6, 5);
+                sideWindowHoles[i++] = waKong(coun, 35, 6, 5);
+            }
+            for (var k = 0; k < sideWindowHoles.length; k++) {
+                var kog = sideWindowHoles[k][0];
+                var kog2 = sideWindowHoles[k][2];
+                var width = kog2.x - kog.x;
+                var height = kog2.z - kog.z;
+                if (kog.z == 0) {
+                    continue;
+                }
+                //窗
+                var windowFBL = windowMaker(width, height, 4, 0.15, 0.1);
+                windowFBL.rotation.z = -Math.PI / 2;
+                windowFBL.rotation.x = -Math.PI / 2;
+                windowFBL.position.x = 115.1;
+                windowFBL.position.y = kog.z;
+                windowFBL.position.z = kog.x;
+            } 
+             
+            var side3FaceUV = new Array(3);
+ 
+            side3FaceUV[0] = new BABYLON.Vector4(0, 0, 7 / 15, 1);
+            side3FaceUV[1] = new BABYLON.Vector4(14 / 15, 0, 1, 1);
+            side3FaceUV[2] = new BABYLON.Vector4(7 / 15, 0, 14 / 15, 1);
+ 
+            var sideWallnb3 = BABYLON.MeshBuilder.ExtrudePolygon("sideWallnb3", { shape: sideWallnb3Data, depth: 0.1, holes: sideWindowHoles, faceUV: side3FaceUV }, scene);
+            sideWallnb3.rotation.z = -Math.PI / 2;
+            sideWallnb3.rotation.x = -Math.PI / 2;
+            sideWallnb3.position.x = 115;
+            sideWallnb3.position.z = 0;
+            sideWallnb3.position.y = 0;
+ 
+            sideWallnb3.material = wallmat;
+        }
+        //画全图
+        var Test = function (scene) {
+            drawFrontWall();
+            drawRearWall();
+            drawFloor();
+            drawSideWallnb2();
+            drawSideWallnb3();
+        }
+ 
+ 
+    </script>
+</body>
+</html>

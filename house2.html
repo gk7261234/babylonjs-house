@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="utf-8" />
+    <title>Babylon - house2</title>
+    <!-- link to the last version of babylon -->
+    <script src="./lib/jquery.min.js"></script>
+    <script src="./lib/babylon.js"></script>
+    <script src="./lib/babylon.gui.min.js"></script>
+    <script src="./lib/babylon.inspector.bundle.js"></script>
+    <script src="./lib/babylonjs.loaders.js"></script>
+    <script src="./lib/babylonjs.materials.min.js"></script>
+    <script src="./lib/babylonjs.postProcess.min.js"></script>
+    <script src="./lib/babylonjs.proceduralTextures.min.js"></script>
+    <script src="./lib/babylonjs.serializers.min.js"></script>
+    <script src="./lib/cannon.js"></script>
+    <script src="./lib/dat.gui.min.js"></script>
+    <script src="./lib/earcut.min.js"></script>
+    <script src="./lib/gltf_validator.js"></script>
+    <script src="./lib/Oimo.js"></script>
+    <style>
+        html, body {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+ 
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+    </style>
+</head>
+ 
+<body>
+  <canvas id="renderCanvas"></canvas>
+  <script type="text/javascript">
+      var Dictionary = function () {
+          this.elements = new Array();
+          //Length of Dictionary
+          this.length = function () {
+              return this.elements.length;
+          };
+          //Check whether the Dictionary is empty
+          this.isEmpty = function () {
+              return (this.length() < 1);
+          };
+          //remove all elements from the Dictionary
+          this.removeAll = function () {
+              this.elements = new Array();
+          };
+          //get specify element of the dictionary
+          this.element = function (index) {
+              var rlt = null;
+              if (index >= 0 && index < this.elements.length) {
+                  rlt = this.elements[index];
+              }
+              return rlt;
+          }
+          //check whether the Dictionary contains this key
+          this.Exists = function (key) {
+              var rlt = false;
+              try {
+                  for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                      if (this.elements[i].key == key) {
+                          rlt = true;
+                          break;
+                      }
+                  }
+              }
+              catch (ex) {
+              }
+              return rlt;
+          };
+          //check whether the Dictionary contains this value
+          this.containsValue = function (value) {
+              var rlt = false;
+              try {
+                  for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                      if (this.elements[i].value == value) {
+                          rlt = true;
+                          break;
+                      }
+                  }
+              }
+              catch (ex) {
+              }
+              return rlt;
+          };
+          //remove this key from the Dictionary
+          this.remove = function (key) {
+              var rlt = false;
+              try {
+                  for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                      if (this.elements[i].key == key) {
+                          this.elements.splice(i, 1);
+                          rlt = true;
+                          break;
+                      }
+                  }
+              }
+              catch (ex) {
+              }
+              return rlt;
+          };
+          //add this key/value to the Dictionary,if key is exists,replace the value
+          this.add = function (key, value) {
+              this.remove(key);
+              this.elements.push({
+                  key: key,
+                  value: value
+              });
+          };
+          //add this key/value to the Dictionary,if key is exists,append value
+          this.set = function (key, value) {
+              var arr = this.getItem(key);
+              if (arr != null) {
+                  if (typeof (arr) == "object") {
+                      arr.unshift.apply(arr, value);
+                      value = arr;
+                  }
+                  else {
+                      var array = [];
+                      array.push(arr);
+                      array.unshift.apply(array, value);
+                      value = array;
+                  }
+                  this.remove(key);
+              }
+              this.elements.push({
+                  key: key,
+                  value: value
+              });
+          }
+          //get value of the key
+          this.getItem = function (key) {
+              var rlt = null;
+              try {
+                  for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                      if (this.elements[i].key == key) {
+                          rlt = this.elements[i].value;
+                          break;
+                      }
+                  }
+              }
+              catch (ex) {
+              }
+              return rlt;
+          };
+          //get all keys of the dictionary
+          this.keys = function () {
+              var arr = [];
+              for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                  arr.push(this.elements[i].key);
+              }
+              return arr;
+          }
+          //get all values of the dictionary
+          this.values = function () {
+              var arr = [];
+              for (var i = 0, iLen = this.length(); i < iLen; i++) {
+                  arr.push(this.elements[i].value);
+              }
+              return arr;
+          }
+      }
+      //初始的元素参数队列
+      var dicS = new Dictionary();
+      //盒子对象队列
+      var dicW = new Dictionary();
+  </script>
+  <script type="text/javascript">
+      //四边墙
+      var wh01 = { posX: 0, posY: 6, posZ: 185, scaX: 84.9, scaY: 3, scaZ: 0.15, name: "z正墙-横边墙", size: 6 };
+      var wh02 = { posX: -255, posY: 6, posZ: 0, scaX: 0.15, scaY: 3, scaZ: 61.8, name: "x负墙-竖边墙", size: 6 };
+      var wh03 = { posX: -177.5, posY: 6, posZ: -185, scaX: 25.8, scaY: 3, scaZ: 0.15, name: "z负墙-横边墙1", size: 6 };
+      var wh031 = { posX: 93, posY: 6, posZ: -185, scaX: 54, scaY: 3, scaZ: 0.15, name: "z负墙-横边墙2", size: 6 };
+      var wh04 = { posX: 255, posY: 6, posZ: 0, scaX: 0.15, scaY: 3, scaZ: 61.8, name: "x正墙-竖边墙", size: 6 };
+      //横墙
+      var wh05 = { posX: -177.5, posY: 6, posZ: -141, scaX: 25.8, scaY: 3, scaZ: 0.15, name: "z负墙-办公室", size: 6 };
+      var wh06 = { posX: -177.5, posY: 6, posZ: -86, scaX: 25.8, scaY: 3, scaZ: 0.15, name: "z负墙-办公室", size: 6 };
+      var wh07 = { posX: -177.5, posY: 6, posZ: -18, scaX: 25.8, scaY: 3, scaZ: 0.15, name: "z负墙-慢走丝", size: 6 };
+      var wh08 = { posX: -120, posY: 6, posZ: 70, scaX: 6.8, scaY: 3, scaZ: 0.15, name: "z负墙-电火花", size: 6 };
+      var wh09 = { posX: -39.8, posY: 6, posZ: -102.5, scaX: 9.8, scaY: 3, scaZ: 0.15, name: "z负墙-电梯", size: 6 };
+      var wh10 = { posX: -39.8, posY: 6, posZ: -140, scaX: 9.8, scaY: 3, scaZ: 0.15, name: "z负墙-电梯", size: 6 };
+      var wh11 = { posX: 100, posY: 6, posZ: -102.5, scaX: 28, scaY: 3, scaZ: 0.15, name: "z负墙-仓库", size: 6 };
+      var wh12 = { posX: 230.5, posY: 6, posZ: -102.5, scaX: 8, scaY: 3, scaZ: 0.15, name: "z负墙-焊工组", size: 6 };
+      var wh13 = { posX: 93, posY: 6, posZ: 120, scaX: 54, scaY: 3, scaZ: 0.15, name: "z负墙-焊工组", size: 6 };
+      var wh14 = { posX: 53, posY: 0, posZ: -60.5, scaX: 41, scaY: 0.3, scaZ: 0.15, name: "z负墙-车床", size: 6 };
+      //竖墙
+      var wh15 = { posX: -100, posY: 6, posZ: 155, scaX: 0.15, scaY: 3, scaZ: 10, name: "x负墙-磨床组", size: 6 };
+      var wh16 = { posX: -100, posY: 6, posZ: 66, scaX: 0.15, scaY: 3, scaZ: 10, name: "x负墙-磨床组", size: 6 };
+      var wh17 = { posX: -100, posY: 6, posZ: -20, scaX: 0.15, scaY: 3, scaZ: 10, name: "x负墙-慢走丝", size: 6 };
+      var wh18 = { posX: -100, posY: 6, posZ: -96, scaX: 0.15, scaY: 3, scaZ: 4, name: "x负墙-办公室", size: 6 };
+      var wh19 = { posX: -140, posY: 6, posZ: 26, scaX: 0.15, scaY: 3, scaZ: 14.8, name: "x负墙-电火花", size: 6 };
+      var wh20 = { posX: -100, posY: 6, posZ: -140, scaX: 0.15, scaY: 3, scaZ: 5, name: "x负墙-办公室", size: 6 };
+      var wh21 = { posX: -100, posY: 6, posZ: -176.5, scaX: 0.15, scaY: 3, scaZ: 3, name: "x负墙-办公室", size: 6 };
+      var wh22 = { posX: -69, posY: 6, posZ: -110.2, scaX: 0.15, scaY: 3, scaZ: 2.7, name: "x负墙-电梯", size: 6 };
+      var wh221 = { posX: -69, posY: 6, posZ: -140, scaX: 0.15, scaY: 3, scaZ: 3, name: "x负墙-电梯1", size: 6 };
+      var wh222 = { posX: -69, posY: 6, posZ: -176.5, scaX: 0.15, scaY: 3, scaZ: 3, name: "x负墙-电梯2", size: 6 };
+      var wh23 = { posX: -10, posY: 6, posZ: -143.7, scaX: 0.15, scaY: 3, scaZ: 13.9, name: "x负墙-电梯", size: 6 };
+      var wh24 = { posX: 110, posY: 6, posZ: -143.7, scaX: 0.15, scaY: 3, scaZ: 13.9, name: "x正墙-仓库", size: 6 };
+      var wh25 = { posX: 207, posY: 6, posZ: 19, scaX: 0.15, scaY: 3, scaZ: 33.5, name: "x正墙-焊工组", size: 6 };
+      //慢走丝
+      var wh26 = { posX: -240, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "慢走丝", size: 22, status: 1 };
+      var wh27 = { posX: -200, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "慢走丝", size: 22, status: 1 };
+      var wh28 = { posX: -160, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "慢走丝", size: 22, status: 1 };
+      var wh29 = { posX: -120, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "慢走丝", size: 22, status: 1 };
+      //电火花
+      var wh30 = { posX: -120, posY: 5, posZ: -0, scaX: 1, scaY: 1, scaZ: 1, name: "电火花", size: 22, status: 1 };
+      var wh31 = { posX: -120, posY: 5, posZ: 50, scaX: 1, scaY: 1, scaZ: 1, name: "电火花", size: 22, status: 1 };
+      //卧加
+      var wh32 = { posX: -40, posY: 6, posZ: 100, scaX: 2, scaY: 0.8, scaZ: 1.5, name: "卧加18", size: 22, status: 1, disp: "s3c2" };
+      var wh33 = { posX: 26, posY: 6, posZ: 100, scaX: 2, scaY: 0.8, scaZ: 1.5, name: "卧加19", size: 22, status: 1, disp: "s3c3" };
+      var wh34 = { posX: 92, posY: 6, posZ: 100, scaX: 2, scaY: 0.8, scaZ: 1.5, name: "卧加20", size: 22, status: 1, disp: "s3c4" };
+      var wh35 = { posX: 158, posY: 6, posZ: 100, scaX: 2, scaY: 0.8, scaZ: 1.5, name: "卧加21", size: 22, status: 1, disp: "s3c5" };
+      //立加
+      var wh36 = { posX: -50, posY: 5, posZ: 0, scaX: 1, scaY: 1, scaZ: 1, name: "立加9", size: 22, status: 1, disp: "s7c5" };
+      var wh37 = { posX: -20, posY: 5, posZ: 0, scaX: 1, scaY: 1, scaZ: 1, name: "立加10", size: 22, status: 1, disp: "s7c6" };
+      var wh38 = { posX: 10, posY: 5, posZ: 0, scaX: 1, scaY: 1, scaZ: 1, name: "立加11", size: 22, status: 1, disp: "s7c7" };
+      var wh39 = { posX: 40, posY: 5, posZ: 0, scaX: 1, scaY: 1, scaZ: 1, name: "立加12", size: 22, status: 1, disp: "s7c8" };
+      var wh40 = { posX: 70, posY: 5, posZ: 0, scaX: 1, scaY: 1, scaZ: 1, name: "立加13", size: 22, status: 1, disp: "s7c9" };
+      var wh41 = { posX: 130, posY: 5, posZ: 0, scaX: 1, scaY: 1, scaZ: 1, name: "立加14", size: 22, status: 1, disp: "s7c11" };
+      var wh42 = { posX: 158, posY: 5, posZ: 0, scaX: 1, scaY: 1, scaZ: 1, name: "立加15", size: 22, status: 1, disp: "s7c12" };
+      var wh43 = { posX: -50, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "立加8", size: 22, status: 1, disp: "s8c1" };
+      var wh45 = { posX: -20, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "立加7", size: 22, status: 1, disp: "s8c2" };
+      var wh46 = { posX: 10, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "立加6", size: 22, status: 1, disp: "s8c3" };
+      var wh47 = { posX: 40, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "立加5", size: 22, status: 1, disp: "s8c4" };
+      var wh48 = { posX: 70, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "立加4", size: 22, status: 1, disp: "s8c5" };
+      var wh49 = { posX: 100, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "立加3", size: 22, status: 1, disp: "s8c6" };
+      var wh50 = { posX: 130, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "立加2", size: 22, status: 1, disp: "s8c7" };
+      var wh51 = { posX: 158, posY: 5, posZ: -40, scaX: 1, scaY: 1, scaZ: 1, name: "立加1", size: 22, status: 1, disp: "s8c8" };
+      var w241 = { posX: 130, posY: 5, posZ: 45, scaX: 1, scaY: 1, scaZ: 1, name: "立加17", size: 22, status: 1, disp: "s6c4" };
+      var w242 = { posX: 158, posY: 5, posZ: 45, scaX: 1, scaY: 1, scaZ: 1, name: "立加16", size: 22, status: 1, disp: "s6c5" };
+      //车床
+      var wh52 = { posX: -52, posY: 5, posZ: -75, scaX: 1, scaY: 1, scaZ: 1, name: "车床", size: 18, status: 1 };
+      var wh53 = { posX: 00, posY: 5, posZ: -75, scaX: 1, scaY: 1, scaZ: 1, name: "车床", size: 18, status: 1 };
+      var wh54 = { posX: 20, posY: 5, posZ: -75, scaX: 1, scaY: 1, scaZ: 1, name: "车床", size: 18, status: 1 };
+      var wh55 = { posX: 50, posY: 5, posZ: -75, scaX: 1, scaY: 1, scaZ: 1, name: "车床", size: 18, status: 1 };
+      var wh56 = { posX: 70, posY: 5, posZ: -75, scaX: 1, scaY: 1, scaZ: 1, name: "车床", size: 18, status: 1 };
+      var wh57 = { posX: 100, posY: 5, posZ: -75, scaX: 1, scaY: 1, scaZ: 1, name: "车床", size: 18, status: 1 };
+      var wh58 = { posX: 120, posY: 5, posZ: -75, scaX: 1, scaY: 1, scaZ: 1, name: "车床", size: 18, status: 1 };
+      var wh59 = { posX: 150, posY: 5, posZ: -75, scaX: 1, scaY: 1, scaZ: 1, name: "车床", size: 18, status: 1 };
+      var wh60 = { posX: 170, posY: 5, posZ: -75, scaX: 1, scaY: 1, scaZ: 1, name: "车床", size: 18, status: 1 };
+      //快走丝
+      var wh61 = { posX: -55, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh62 = { posX: -30, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh63 = { posX: -5, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh64 = { posX: 20, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh65 = { posX: 45, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh66 = { posX: 70, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh67 = { posX: 95, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh68 = { posX: 120, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh69 = { posX: 145, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh70 = { posX: 170, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh71 = { posX: 195, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh72 = { posX: 220, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh73 = { posX: 245, posY: 5, posZ: 172, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh74 = { posX: -30, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh75 = { posX: -5, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh76 = { posX: 20, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh77 = { posX: 45, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh78 = { posX: 70, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 3 };
+      var wh79 = { posX: 95, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh80 = { posX: 120, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh81 = { posX: 145, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh82 = { posX: 170, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh83 = { posX: 195, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh84 = { posX: 220, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      var wh85 = { posX: 245, posY: 5, posZ: 132, scaX: 1, scaY: 1, scaZ: 1, name: "快走丝", size: 15, status: 1 };
+      //磨床组
+      var wh86 = { posX: -160, posY: 5, posZ: 0, scaX: 1.2, scaY: 1, scaZ: 0.6, name: "磨床组", size: 22, status: 1 };
+      var wh87 = { posX: -199, posY: 5, posZ: 0, scaX: 1.2, scaY: 1, scaZ: 0.6, name: "磨床组", size: 22, status: 1 };
+      var wh88 = { posX: -238, posY: 5, posZ: 0, scaX: 1.2, scaY: 1, scaZ: 0.6, name: "磨床组", size: 22, status: 1 };
+      var wh89 = { posX: -160, posY: 5, posZ: 30, scaX: 1.2, scaY: 1, scaZ: 0.6, name: "磨床组", size: 22, status: 1 };
+      var wh90 = { posX: -160, posY: 5, posZ: 60, scaX: 1.2, scaY: 1, scaZ: 0.6, name: "磨床组", size: 22, status: 1 };
+      var wh91 = { posX: -238, posY: 5, posZ: 30, scaX: 1.2, scaY: 1, scaZ: 0.6, name: "磨床组", size: 22, status: 1 };
+      var wh92 = { posX: -238, posY: 5, posZ: 60, scaX: 1.2, scaY: 1, scaZ: 0.6, name: "磨床组", size: 22, status: 1 };
+      var wh93 = { posX: -245, posY: 5, posZ: 160, scaX: 0.6, scaY: 1, scaZ: 1.2, name: "磨床组", size: 22, status: 1 };
+      var wh94 = { posX: -212.5, posY: 5, posZ: 160, scaX: 0.6, scaY: 1, scaZ: 1.2, name: "磨床组", size: 22, status: 1 };
+      var wh95 = { posX: -180, posY: 5, posZ: 160, scaX: 0.6, scaY: 1, scaZ: 1.2, name: "磨床组", size: 22, status: 1 };
+      var wh96 = { posX: -147.5, posY: 5, posZ: 160, scaX: 0.6, scaY: 1, scaZ: 1.2, name: "磨床组", size: 22, status: 2 };
+      var wh97 = { posX: -115, posY: 5, posZ: 160, scaX: 0.6, scaY: 1, scaZ: 1.2, name: "磨床组", size: 22, status: 1 };
+      var wh98 = { posX: -245, posY: 5, posZ: 124, scaX: 0.6, scaY: 1, scaZ: 1.2, name: "磨床组", size: 22, status: 1 };
+      var wh99 = { posX: -245, posY: 5, posZ: 88, scaX: 0.6, scaY: 1, scaZ: 1.2, name: "磨床组", size: 22, status: 1 };
+      //普车组
+      var wh100 = { posX: 126, posY: 5, posZ: -115, scaX: 1, scaY: 1, scaZ: 1, name: "普车组", size: 18, status: 1 };
+      var wh101 = { posX: 148, posY: 5, posZ: -115, scaX: 1, scaY: 1, scaZ: 1, name: "普车组", size: 18, status: 1 };
+      var wh102 = { posX: 170, posY: 5, posZ: -115, scaX: 1, scaY: 1, scaZ: 1, name: "普车组", size: 18, status: 1 };
+      var wh103 = { posX: 126, posY: 5, posZ: -144, scaX: 1, scaY: 1, scaZ: 1, name: "普车组", size: 18, status: 1 };
+      var wh104 = { posX: 126, posY: 5, posZ: -173, scaX: 1, scaY: 1, scaZ: 1, name: "普车组", size: 18, status: 1 };
+      var wh105 = { posX: 148, posY: 5, posZ: -173, scaX: 1, scaY: 1, scaZ: 1, name: "普车组", size: 18, status: 1 };
+      var wh106 = { posX: 170, posY: 5, posZ: -173, scaX: 1, scaY: 1, scaZ: 1, name: "普车组", size: 18, status: 1 };
+      var wh107 = { posX: 192, posY: 5, posZ: -173, scaX: 1, scaY: 1, scaZ: 1, name: "普车组", size: 18, status: 3 };
+      var wh108 = { posX: 214, posY: 5, posZ: -173, scaX: 1, scaY: 1, scaZ: 1, name: "普车组", size: 18, status: 1 };
+
+
+      var initDic = function () {
+          //四边墙
+          dicS.add("wh01", wh01);
+          dicS.add("wh02", wh02);
+          dicS.add("wh03", wh03);
+          dicS.add("wh031", wh031);
+          dicS.add("wh04", wh04);
+          //竖墙
+          dicS.add("wh05", wh05);
+          dicS.add("wh06", wh06);
+          dicS.add("wh07", wh07);
+          dicS.add("wh08", wh08);
+          dicS.add("wh09", wh09);
+          dicS.add("wh10", wh10);
+          dicS.add("wh11", wh11);
+          dicS.add("wh12", wh12);
+          dicS.add("wh13", wh13);
+          dicS.add("wh14", wh14);
+          //横墙
+          dicS.add("wh15", wh15);
+          dicS.add("wh16", wh16);
+          dicS.add("wh17", wh17);
+          dicS.add("wh18", wh18);
+          dicS.add("wh19", wh19);
+          dicS.add("wh20", wh20);
+          dicS.add("wh21", wh21);
+          dicS.add("wh22", wh22);
+          dicS.add("wh221", wh221);
+          dicS.add("wh222", wh222);
+          dicS.add("wh23", wh23);
+          dicS.add("wh24", wh24);
+          dicS.add("wh25", wh25);
+          //慢走丝
+          dicS.add("wh26", wh26);
+          dicS.add("wh27", wh27);
+          dicS.add("wh28", wh28);
+          dicS.add("wh29", wh29);
+          //电火花
+          dicS.add("wh30", wh30);
+          dicS.add("wh31", wh31);
+          //卧加
+          dicS.add("wh32", wh32);
+          dicS.add("wh33", wh33);
+          dicS.add("wh34", wh34);
+          dicS.add("wh35", wh35);
+          //立加
+          dicS.add("wh36", wh36);
+          dicS.add("wh37", wh37);
+          dicS.add("wh38", wh38);
+          dicS.add("wh39", wh39);
+          dicS.add("wh40", wh40);
+          dicS.add("wh41", wh41);
+          dicS.add("wh42", wh42);
+          dicS.add("wh43", wh43);
+          dicS.add("wh45", wh45);
+          dicS.add("wh46", wh46);
+          dicS.add("wh47", wh47);
+          dicS.add("wh48", wh48);
+          dicS.add("wh49", wh49);
+          dicS.add("wh50", wh50);
+          dicS.add("wh51", wh51);
+          dicS.add("w241", w241);
+          dicS.add("w242", w242);
+          //车床
+          dicS.add("wh52", wh52);
+          dicS.add("wh53", wh53);
+          dicS.add("wh54", wh54);
+          dicS.add("wh55", wh55);
+          dicS.add("wh56", wh56);
+          dicS.add("wh57", wh57);
+          dicS.add("wh58", wh58);
+          dicS.add("wh59", wh59);
+          dicS.add("wh60", wh60);
+          //快走丝
+          dicS.add("wh61", wh61);
+          dicS.add("wh62", wh62);
+          dicS.add("wh63", wh63);
+          dicS.add("wh64", wh64);
+          dicS.add("wh65", wh65);
+          dicS.add("wh66", wh66);
+          dicS.add("wh67", wh67);
+          dicS.add("wh68", wh68);
+          dicS.add("wh69", wh69);
+          dicS.add("wh70", wh70);
+          dicS.add("wh71", wh71);
+          dicS.add("wh72", wh72);
+          dicS.add("wh73", wh73);
+          dicS.add("wh74", wh74);
+          dicS.add("wh75", wh75);
+          dicS.add("wh76", wh76);
+          dicS.add("wh77", wh77);
+          dicS.add("wh78", wh78);
+          dicS.add("wh79", wh79);
+          dicS.add("wh80", wh80);
+          dicS.add("wh81", wh81);
+          dicS.add("wh82", wh82);
+          dicS.add("wh83", wh83);
+          dicS.add("wh84", wh84);
+          dicS.add("wh85", wh85);
+          //磨床组
+          dicS.add("wh86", wh86);
+          dicS.add("wh87", wh87);
+          dicS.add("wh88", wh88);
+          dicS.add("wh89", wh89);
+          dicS.add("wh90", wh90);
+          dicS.add("wh91", wh91);
+          dicS.add("wh92", wh92);
+          dicS.add("wh93", wh93);
+          dicS.add("wh94", wh94);
+          dicS.add("wh95", wh95);
+          dicS.add("wh96", wh96);
+          dicS.add("wh97", wh97);
+          dicS.add("wh98", wh98);
+          dicS.add("wh99", wh99);
+          //普车组
+          dicS.add("wh100", wh100);
+          dicS.add("wh101", wh101);
+          dicS.add("wh102", wh102);
+          dicS.add("wh103", wh103);
+          dicS.add("wh104", wh104);
+          dicS.add("wh105", wh105);
+          dicS.add("wh106", wh106);
+          dicS.add("wh107", wh107);
+          dicS.add("wh108", wh108);
+      }
+  </script>
+  <script>
+      //获取画布对象
+      var canvas = document.getElementById('renderCanvas');
+      //加载巴比伦3D引擎
+      var engine = new BABYLON.Engine(canvas, true);
+      var planeBG = null;
+      var materialPlane = null;
+      var scene = null;//场景
+      var camera = null;//镜头
+      var light = null;//灯光
+      var currentFloor = 1;//当前楼层
+      var colorArray = new Array(null, null, null);
+      $(document).ready(function () {
+          engine.displayLoadingUI();
+          //赋予该场景于变量
+          scene = createScene();
+          //创建控制面板
+          createUiPanel();
+          //创建图例面板
+          createUiPanelLegend();
+          //在引擎中循环运行这个场景
+          engine.runRenderLoop(function () {
+              scene.render();
+          });
+          //事件
+          scene.beforeRender = function () {
+
+          };
+          //追加事件：帆布与大小调整程序
+          window.addEventListener('resize', function () {
+              engine.resize();
+          });
+          getstatus();
+          var int = self.setInterval("getstatus()", 5000);
+          engine.hideLoadingUI();
+      });
+      //创建原点
+      var createXYZ = function (scene) {
+          //原点
+          var sphere_0 = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+          sphere_0.position.x = 0;
+          sphere_0.position.y = 0;
+          sphere_0.position.z = 0;
+          //x点
+          var sphere_x = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+          sphere_x.position.x = 10;
+          sphere_x.position.y = 0;
+          sphere_x.position.z = 0;
+          var materialSphere2 = new BABYLON.StandardMaterial("texture2", scene);
+          materialSphere2.diffuseColor = new BABYLON.Color3(1, 0, 0); //Red
+          sphere_x.material = materialSphere2;
+          //z点
+          var sphere_z = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+          sphere_z.position.x = 0;
+          sphere_z.position.y = 0;
+          sphere_z.position.z = 10;
+          var materialSphere3 = new BABYLON.StandardMaterial("texture2", scene);
+          materialSphere3.diffuseColor = new BABYLON.Color3(0, 2, 0); //green
+          sphere_z.material = materialSphere3;
+      }
+      //画地板文字
+      var drawBoardText = function (scene) {
+          //写字
+          var barLegend = BABYLON.Mesh.CreateGround("barLegend", 512, 370, 1, scene, false);
+          barLegend.position.x = 0;
+          barLegend.position.z = 0;
+          barLegend.position.y = 0.1;
+
+          barLegend.material = new BABYLON.StandardMaterial("", scene);
+          var barLegendTexture = new BABYLON.DynamicTexture("dynamic texture", 512, scene, true);
+          barLegendTexture.hasAlpha = true;
+          barLegend.material.diffuseTexture = barLegendTexture;
+          barLegend.material.emissiveColor = new BABYLON.Color3(0.4, 0.4, 0.4);
+
+          var size = barLegendTexture.getSize();
+          barLegendTexture.drawText("磨床组", 40, 120, "20px Arial", "white", "transparent");
+          barLegendTexture.drawText("慢走丝", 40, 360, "20px verdana", "white", "transparent");
+          barLegendTexture.drawText("办公室", 40, 425, "20px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("办公室", 40, 492, "20px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("快走丝", 300, 50, "20px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("卧加", 250, 160, "20px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("线边仓", 270, 210, "20px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("立加", 336, 265, "20px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("车床", 213, 365, "17px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("电梯", 195, 430, "20px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("楼梯", 195, 490, "20px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("原材料仓库", 250, 460, "20px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("普车组、铣钻组", 396, 460, "17px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("焊", 480, 240, "20px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("工", 480, 260, "20px Segoe UI", "white", "transparent");
+          barLegendTexture.drawText("组", 480, 280, "20px Segoe UI", "white", "transparent");
+
+      }
+      //图例面板
+      var createUiPanelLegend = function () {
+          // UI
+          var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+          var UiPanel = new BABYLON.GUI.StackPanel();
+          //UiPanel.height = "220px";
+          UiPanel.fontSize = "14px";
+          UiPanel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+          UiPanel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_CENTER;
+          advancedTexture.addControl(UiPanel);
+          // ..
+          var button = BABYLON.GUI.Button.CreateSimpleButton("but1", "正常");
+          button.paddingTop = "1px";
+          button.paddingLeft = "5px";
+          button.width = "50px";
+          button.height = "30px";
+          button.color = "black";
+          button.background = "green";
+
+          UiPanel.addControl(button);
+          // ..
+          var button1 = BABYLON.GUI.Button.CreateSimpleButton("but2", "待机");
+          button1.paddingTop = "1px";
+          button1.paddingLeft = "5px";
+          button1.width = "50px";
+          button1.height = "30px";
+          button1.color = "black";
+          button1.background = "yellow";
+
+          UiPanel.addControl(button1);
+          // ..
+          var button1 = BABYLON.GUI.Button.CreateSimpleButton("but3", "停机");
+          button1.paddingTop = "1px";
+          button1.paddingLeft = "5px";
+          button1.width = "50px";
+          button1.height = "30px";
+          button1.color = "black";
+          button1.background = "red";
+
+          UiPanel.addControl(button1);
+          // ..
+          var button1 = BABYLON.GUI.Button.CreateSimpleButton("but4", "未连接");
+          button1.paddingTop = "1px";
+          button1.paddingLeft = "5px";
+          button1.width = "50px";
+          button1.height = "30px";
+          button1.color = "black";
+          button1.background = "gray";
+
+          UiPanel.addControl(button1);
+      }
+      //控制面板
+      var createUiPanel = function () {
+          // UI
+          var advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("UI");
+          var UiPanel = new BABYLON.GUI.StackPanel();
+          UiPanel.fontSize = "14px";
+          UiPanel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+          UiPanel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+          advancedTexture.addControl(UiPanel);
+          // ..
+          var button = BABYLON.GUI.Button.CreateSimpleButton("but1", "全图");
+          button.paddingTop = "5px";
+          button.paddingLeft = "5px";
+          button.width = "80px";
+          button.height = "40px";
+          button.color = "white";
+          button.background = "green";
+          button.onPointerDownObservable.add(() => {
+              if (currentFloor != 0) {
+                  currentFloor = 0;
+                  scene = createScene2();
+                  createUiPanel();
+              }
+          });
+
+          UiPanel.addControl(button);
+          // ..
+          var button1 = BABYLON.GUI.Button.CreateSimpleButton("but2", "一楼");
+          button1.paddingTop = "1px";
+          button1.paddingLeft = "5px";
+          button1.width = "80px";
+          button1.height = "40px";
+          button1.color = "white";
+          button1.background = "green";
+          button1.onPointerDownObservable.add(() => {
+              if (currentFloor != 1) {
+                  currentFloor = 1;
+                  scene = createScene();
+                  createUiPanel();
+                  createUiPanelLegend();
+              }
+          });
+
+          UiPanel.addControl(button1);
+          // ..
+          var button1 = BABYLON.GUI.Button.CreateSimpleButton("but3", "二楼");
+          button1.paddingTop = "1px";
+          button1.paddingLeft = "5px";
+          button1.width = "80px";
+          button1.height = "40px";
+          button1.color = "white";
+          button1.background = "green";
+
+          UiPanel.addControl(button1);
+          // ..
+          var button1 = BABYLON.GUI.Button.CreateSimpleButton("but4", "三楼");
+          button1.paddingTop = "1px";
+          button1.paddingLeft = "5px";
+          button1.width = "80px";
+          button1.height = "40px";
+          button1.color = "white";
+          button1.background = "green";
+
+          UiPanel.addControl(button1);
+          // ..
+          var button1 = BABYLON.GUI.Button.CreateSimpleButton("but4", "四楼");
+          button1.paddingTop = "1px";
+          button1.paddingLeft = "5px";
+          button1.width = "80px";
+          button1.height = "40px";
+          button1.color = "white";
+          button1.background = "green";
+
+          UiPanel.addControl(button1);
+      }
+      //创建机器
+      var createWall = function (wall, scene) {
+          //墙体样式
+          var materialWall = new BABYLON.StandardMaterial("Wall", scene);
+          materialWall.alpha = 0.5;
+
+          var cWall = BABYLON.Mesh.CreateBox(wall.name, wall.size, scene);
+          cWall.position.x = wall.posX;
+          cWall.position.y = wall.posY;
+          cWall.position.z = wall.posZ;
+          cWall.scaling.x = wall.scaX;
+          cWall.scaling.y = wall.scaY;
+          cWall.scaling.z = wall.scaZ;
+          if (wall.status != undefined) {
+              if (wall.status == 1) {
+                  cWall.material = colorArray[0];
+              } else if (wall.status == 2) {
+                  cWall.material = colorArray[1];
+              } else if (wall.status == 3) {
+                  cWall.material = colorArray[2];
+              } else {
+                  cWall.material = colorArray[3];
+              }
+          } else {
+              cWall.material = materialWall;
+          }
+          if (wall.status != undefined) {
+              makeOverOut(cWall, scene);
+
+              //创建盒子文字
+              var barLegend = BABYLON.Mesh.CreateGround("barLegend", wall.scaX * wall.size, wall.scaZ * wall.size, 1, scene, false);
+              barLegend.position.x = cWall.position.x;
+              barLegend.position.y = (wall.size * wall.scaY) / 2.0 + wall.posY + 0.3;
+              barLegend.position.z = cWall.position.z;
+              barLegend.material = new BABYLON.StandardMaterial("", scene);
+              var barLegendTexture = new BABYLON.DynamicTexture("dynamic texture", 50, scene, true);
+              barLegendTexture.hasAlpha = true;
+              barLegend.material.diffuseTexture = barLegendTexture;
+              barLegend.material.emissiveColor = new BABYLON.Color3(0.4, 0.4, 0.4);
+              barLegendTexture.drawText(wall.name, 0, 40, "bold 19px Segoe UI", "white", "transparent");
+          }
+          if (wall.disp != undefined) {
+              dicW.add(wall.disp, cWall)
+          }
+      }
+      // Over/Out/OnPick
+      var makeOverOut = function (mesh, scene) {
+          // mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOutTrigger, mesh.material, "emissiveColor", mesh.material.emissiveColor));
+          //mesh.actionManager.registerAction(new BABYLON.SetValueAction(BABYLON.ActionManager.OnPointerOverTrigger, mesh.material, "emissiveColor", BABYLON.Color3.White()));
+
+          mesh.actionManager = new BABYLON.ActionManager(scene);
+          var outVector = new BABYLON.Vector3(mesh.scaling.x, mesh.scaling.y, mesh.scaling.z);
+          var overVector = new BABYLON.Vector3(mesh.scaling.x * 1.1, mesh.scaling.y * 1.1, mesh.scaling.z * 1.1);
+          mesh.actionManager.registerAction(new BABYLON.InterpolateValueAction(BABYLON.ActionManager.OnPointerOutTrigger, mesh, "scaling", outVector, 150));
+          mesh.actionManager.registerAction(new BABYLON.InterpolateValueAction(BABYLON.ActionManager.OnPointerOverTrigger, mesh, "scaling", overVector, 150));
+          var positionVector3 = new BABYLON.Vector3(mesh.position.x, mesh.position.y, mesh.position.z)
+          mesh.actionManager.registerAction(new BABYLON.InterpolateValueAction(BABYLON.ActionManager.OnPickTrigger, camera, "target", positionVector3, 150));
+      }
+      //获取设备状态
+      var getstatus = function () {
+        //   $.ajax({
+        //       url: "../../MachineManage/Machine/GetDataJson",
+        //       type: "get",
+        //       dataType: "json",
+        //       async: true,
+        //       success: function (jsons) {
+        //           jsons.forEach(
+        //           function (e) {
+        //               var arrkey = dicW.keys(); 
+        //               $.each(arrkey, function (i, key) {
+        //                   if (key == e.DisplayPosition) { 
+        //                       var wall = dicW.getItem(key);
+        //                       if (e.Status == 1) {
+        //                           wall.material = colorArray[0];
+        //                       } else if (e.Status == 2) {
+        //                           wall.material = colorArray[1];
+        //                       } else if (e.Status == 3) {
+        //                           wall.material = colorArray[2];
+        //                       } else {
+        //                           wall.material = colorArray[3];
+        //                       }
+        //                   }
+        //               });
+        //           });
+        //       }
+        //   });
+      }
+      //创建一楼场景
+      var createScene = function () {
+          //场景
+          scene = new BABYLON.Scene(engine);
+          //scene.clearColor = new BABYLON.Color3(0.5, 0.5, 0.5);//灰色
+          scene.clearColor = new BABYLON.Color3(0.3, 0.6, 0.9);//浅蓝
+          //镜头
+          camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 0.6, Math.PI / 6, 550, BABYLON.Vector3.Zero(), scene);
+          camera.upperBetaLimit = 1.5;
+          camera.attachControl(canvas, true);
+          //灯光
+          light = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0.4, 0.3, -0.4), scene);
+          //底图-草地
+          planeBG = BABYLON.Mesh.CreatePlane("plane", 550, scene);
+          planeBG.position.y = -0.1;
+          planeBG.rotation.x = Math.PI / 2;
+          var materialBG = new BABYLON.StandardMaterial("texturePlane", scene);
+          materialBG.diffuseTexture = new BABYLON.Texture("./images/shuinidi.jpg", scene);
+          materialBG.diffuseTexture.uScale = 5.0;//Repeat 5 times on the Vertical Axes
+          materialBG.diffuseTexture.vScale = 5.0;//Repeat 5 times on the Horizontal Axes
+          materialBG.backFaceCulling = false;//Always show the front and the back of an element
+          planeBG.material = materialBG;
+          //工厂地面
+          var plane = BABYLON.Mesh.CreatePlane("plane", 512, scene);
+          plane.position.y = -0;
+          plane.rotation.x = Math.PI / 2;
+          plane.rotation.z = 0;
+          plane.scaling.x = 1;
+          plane.scaling.y = 0.724569;
+          materialPlane = new BABYLON.StandardMaterial("texturePlane", scene);
+          materialPlane.diffuseTexture = new BABYLON.Texture("./images/shuinidi.jpg", scene);
+          materialPlane.diffuseTexture.uScale = 5.0;//Repeat 5 times on the Vertical Axes
+          materialPlane.diffuseTexture.vScale = 5.0;//Repeat 5 times on the Horizontal Axes
+          materialPlane.backFaceCulling = false;//Always show the front and the back of an element
+          //materialPlane.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.3); //Red
+          plane.material = materialPlane;
+          //颜色变量
+          var materialColorGreen = new BABYLON.StandardMaterial("texture2", scene);
+          materialColorGreen.diffuseColor = new BABYLON.Color3(0, 0.85, 0); //green
+          colorArray[0] = materialColorGreen;
+          var materialColorYellow = new BABYLON.StandardMaterial("texture2", scene);
+          materialColorYellow.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0); //yellow
+          colorArray[1] = materialColorYellow;
+          var materialColorRed = new BABYLON.StandardMaterial("texture2", scene);
+          materialColorRed.diffuseColor = new BABYLON.Color3(0.85, 0, 0); //red
+          colorArray[2] = materialColorRed;
+          var materialColorBrown = new BABYLON.StandardMaterial("texture2", scene);
+          materialColorBrown.diffuseColor = new BABYLON.Color3(0.4, 0.4, 0.4); //灰色
+          colorArray[3] = materialColorBrown;
+
+          //创建坐标参照物
+          createXYZ(scene);
+
+          //初始化物体数据
+          initDic();
+
+          //循环创建物体
+          var arrkey = dicS.keys();
+          $.each(arrkey, function (i, fe) {
+              var key = fe;
+              var wall = dicS.getItem(fe);
+              createWall(wall, scene);
+          });
+
+          //写地板问题
+          drawBoardText(scene);
+
+          //UI图例
+          createUiPanel();
+
+          return scene;
+      }
+      //创建二楼场景
+      var createScene2 = function () {
+          //场景
+          var scene = new BABYLON.Scene(engine);
+          //scene.clearColor = BABYLON.Color3.White();
+          scene.clearColor = new BABYLON.Color3(0.5, 0.5, 0.5)
+
+          // Skybox
+          var skybox = BABYLON.Mesh.CreateBox("skyBox", 100.0, scene);
+          var skyboxMaterial = new BABYLON.StandardMaterial("skyBox", scene);
+          skyboxMaterial.backFaceCulling = false;
+          skyboxMaterial.reflectionTexture = new BABYLON.CubeTexture("./images/skybox", scene);
+          skyboxMaterial.reflectionTexture.coordinatesMode = BABYLON.Texture.SKYBOX_MODE;
+          skyboxMaterial.diffuseColor = new BABYLON.Color3(0, 0, 0);
+          skyboxMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+          skyboxMaterial.disableLighting = true;
+          skybox.material = skyboxMaterial;
+
+          //镜头
+          camera = new BABYLON.ArcRotateCamera("Camera", Math.PI / 0.6, Math.PI / 6, 750, BABYLON.Vector3.Zero(), scene);
+          camera.attachControl(canvas, true);
+          //灯光
+          var light = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0.4, 0.3, -0.4), scene);
+          //底图-草地
+          planeBG = BABYLON.Mesh.CreatePlane("plane", 550, scene);
+          planeBG.position.y = -0.1;
+          planeBG.rotation.x = Math.PI / 2;
+          var materialBG = new BABYLON.StandardMaterial("texturePlane", scene);
+          materialBG.diffuseTexture = new BABYLON.Texture("./images/grass.jpg", scene);
+          materialBG.diffuseTexture.uScale = 5.0;//Repeat 5 times on the Vertical Axes
+          materialBG.diffuseTexture.vScale = 5.0;//Repeat 5 times on the Horizontal Axes
+          materialBG.backFaceCulling = false;//Always show the front and the back of an element
+          planeBG.material = materialBG;
+          //工厂地面
+          var plane = BABYLON.Mesh.CreatePlane("plane", 512, scene);
+          plane.position.y = -0;
+          plane.rotation.x = Math.PI / 2;
+          plane.rotation.z = 0;
+          plane.scaling.x = 1;
+          plane.scaling.y = 0.724569;
+          materialPlane = new BABYLON.StandardMaterial("texturePlane", scene);
+          materialPlane.diffuseTexture = new BABYLON.Texture("./images/shuinidi.jpg", scene);
+          materialPlane.diffuseTexture.uScale = 5.0;//Repeat 5 times on the Vertical Axes
+          materialPlane.diffuseTexture.vScale = 5.0;//Repeat 5 times on the Horizontal Axes
+          materialPlane.backFaceCulling = false;//Always show the front and the back of an element
+          //materialPlane.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.3); //Red
+          plane.material = materialPlane;
+          //原点
+          sphere_0 = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+          sphere_0.position.x = 0;
+          sphere_0.position.y = 0;
+          sphere_0.position.z = 0;
+          //x点
+          var sphere_x = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+          sphere_x.position.x = 10;
+          sphere_x.position.y = 0;
+          sphere_x.position.z = 0;
+          var materialSphere2 = new BABYLON.StandardMaterial("texture2", scene);
+          materialSphere2.diffuseColor = new BABYLON.Color3(1, 0, 0); //Red
+          sphere_x.material = materialSphere2;
+          //z点
+          var sphere_z = BABYLON.Mesh.CreateSphere("Sphere1", 1, 3, scene);
+          sphere_z.position.x = 0;
+          sphere_z.position.y = 0;
+          sphere_z.position.z = 10;
+          var materialSphere3 = new BABYLON.StandardMaterial("texture2", scene);
+          materialSphere3.diffuseColor = new BABYLON.Color3(0, 2, 0); //green
+          sphere_z.material = materialSphere3;
+
+          return scene;
+      }
+
+  </script>
+</body>
+
+</html>
